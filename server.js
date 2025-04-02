@@ -13,17 +13,29 @@ let todos = [
   { id: 2, text: 'Build a to-do app', isComplete: false }
 ];
 
+app.get('/', (req, res) => {
+  res.send('Backend is running');
+});
+
+
 // Get all to-do items
 app.get('/todos', (req, res) => {
   res.json(todos);
 });
+
+app.get('/todos/:id', (req, res) => {
+  const todo = todos.find(t => t.id === parseInt(req.params.id));
+  if (!todo) return res.status(404).send('Todo not found');
+  res.json(todo);
+});
+
 
 // Add a new to-do item
 app.post('/todos', (req, res) => {
   const newTodo = {
     id: todos.length + 1,
     text: req.body.text,
-    isComplete: false
+    Complete: req.body.completed || false
   };
   todos.push(newTodo);
   res.status(201).json(newTodo);
@@ -35,6 +47,7 @@ app.put('/todos/:id', (req, res) => {
   const todo = todos.find((todo) => todo.id === todoId);
   if (!todo) return res.status(404).json({ message: 'Todo not found' });
 
+  todo.task=req.body.task;
   todo.isComplete = !todo.isComplete;
   res.json(todo);
 });
