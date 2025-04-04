@@ -2,6 +2,22 @@ const express = require('express');
 const cors = require('cors');
 const app = express();
 const port = 5000;
+const Todo = require('./todoModel'); // Import the Todo model
+
+
+require('dotenv').config();
+const mongoose = require('mongoose');
+
+// MongoDB connection URI from environment variable
+const mongoURI = process.env.MONGODB_URI;
+
+mongoose.connect(mongoURI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log('MongoDB Connected'))
+.catch((err) => console.log(err));
+
 
 // Middleware
 app.use(cors());
@@ -30,15 +46,22 @@ app.get('/todos/:id', (req, res) => {
 });
 
 
-// Add a new to-do item
-app.post('/todos', (req, res) => {
-  const newTodo = {
-    id: todos.length + 1,
-    text: req.body.text,
-    Complete: req.body.completed || false
-  };
-  todos.push(newTodo);
-  res.status(201).json(newTodo);
+app.post('/todos', async (req, res) => {
+  const { text, completed } = req.body;
+
+  // Create a new Todo document
+  const newTodo = new Todo({
+    text,
+    completed,
+  });
+
+  try {
+    // Save the new todo to MongoDB
+    const savedTodo = await newTodo.save();
+    res.status(201).json(savedTodo);
+  } catch (err) {
+    res.status(500).json({ message: 'Error adding todo', error: err });
+  }
 });
 
 // Update a to-do item (toggle completion status)
@@ -52,12 +75,21 @@ app.put('/todos/:id', (req, res) => {
   res.json(todo);
 });
 
-// Delete a to-do item
-app.delete('/todos/:id', (req, res) => {
-  const todoId = parseInt(req.params.id);
-  todos = todos.filter((todo) => todo.id !== todoId);
-  res.status(204).send();
+app.delete('/todos/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Delete the todo by its ID
+    const deletedTodo = await Todo.findByIdAndDelete(id);
+    if (!deletedTodo) {
+      return res.status(404).json({ message: 'Todo not found' });
+    }
+    res.status(200).json({ message: 'Todo deleted' });
+  } catch (err) {
+    res.status(500).json({ message: 'Error deleting todo', error: err });
+  }
 });
+
 
 // Start the server
 app.listen(port, () => {
