@@ -22,11 +22,9 @@ if (!mongoURI) {
 }
 
 // MongoDB Connection
-mongoose.connect(mongoURI) 
-
-.then(() => console.log('MongoDB Connected'))
-.catch((err) => console.error('MongoDB connection error:', err));
-  
+mongoose.connect(mongoURI)
+  .then(() => console.log('MongoDB Connected'))
+  .catch((err) => console.error('MongoDB connection error:', err));
 
 // Middleware
 app.use(cors());
@@ -99,7 +97,7 @@ app.put('/todos/:id', async (req, res) => {
     if (!updatedTodo) {
       return res.status(404).json({ message: 'Todo not found' });
     }
-    
+
     res.json(updatedTodo);
   } catch (err) {
     console.error('Error updating todo:', err);
@@ -109,8 +107,15 @@ app.put('/todos/:id', async (req, res) => {
 
 // Delete a to-do item
 app.delete('/todos/:id', async (req, res) => {
+  const { id } = req.params;
+
+  // Validate that id is not undefined or invalid
+  if (!id || !mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ message: 'Invalid Todo ID' });
+  }
+
   try {
-    const deletedTodo = await Todo.findByIdAndDelete(req.params.id);
+    const deletedTodo = await Todo.findByIdAndDelete(id);
     if (!deletedTodo) {
       return res.status(404).json({ message: 'Todo not found' });
     }
