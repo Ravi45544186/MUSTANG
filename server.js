@@ -1,95 +1,125 @@
+require('dotenv').config();  // Make sure dotenv is at the top
+
 const express = require('express');
 const cors = require('cors');
-const app = express();
-const port = 5000;
-const Todo = require('./todoModel'); // Import the Todo model
-
-
-require('dotenv').config();
 const mongoose = require('mongoose');
+const Todo = require('./todoModel');  // Import the Todo model
+
+const app = express();
+const port = process.env.PORT || 5000;  // Use environment variable for PORT
 
 // MongoDB connection URI from environment variable
 const mongoURI = process.env.MONGODB_URI;
 
-mongoose.connect(mongoURI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log('MongoDB Connected'))
-.catch((err) => console.log(err));
+// Check if the URI is correctly loaded
+console.log('Mongo URI:', mongoURI);  // This should log the actual MongoDB URI
+console.log('Test Variable:', process.env.TEST_VARIABLE);  // Ensure TEST_VARIABLE is set in .env for testing
 
+// Exit if Mongo URI is not found
+if (!mongoURI) {
+  console.error('Mongo URI is missing in the .env file');
+  process.exit(1);  // Stop the server if the URI is missing
+}
+
+// MongoDB Connection
+mongoose.connect(mongoURI) 
+
+.then(() => console.log('MongoDB Connected'))
+.catch((err) => console.error('MongoDB connection error:', err));
+  
 
 // Middleware
 app.use(cors());
 app.use(express.json());  // To parse JSON bodies
 
-// In-memory storage for to-do items (to simulate a database)
-let todos = [
-  { id: 1, text: 'Learn React', isComplete: false },
-  { id: 2, text: 'Build a to-do app', isComplete: false }
-];
+// Routes
 
+// Home route
 app.get('/', (req, res) => {
   res.send('Backend is running');
 });
 
-
-// Get all to-do items
-app.get('/todos', (req, res) => {
-  res.json(todos);
+// Get all to-do items from MongoDB
+app.get('/todos', async (req, res) => {
+  try {
+    const todos = await Todo.find();  // Fetch all todos from MongoDB
+    res.json(todos);
+  } catch (err) {
+    console.error('Error fetching todos:', err);
+    res.status(500).json({ message: 'Error fetching todos', error: err });
+  }
 });
 
-app.get('/todos/:id', (req, res) => {
-  const todo = todos.find(t => t.id === parseInt(req.params.id));
-  if (!todo) return res.status(404).send('Todo not found');
-  res.json(todo);
+// Get a specific to-do item by ID
+app.get('/todos/:id', async (req, res) => {
+  try {
+    const todo = await Todo.findById(req.params.id);
+    if (!todo) {
+      return res.status(404).send('Todo not found');
+    }
+    res.json(todo);
+  } catch (err) {
+    console.error('Error fetching todo by ID:', err);
+    res.status(500).json({ message: 'Error fetching todo', error: err });
+  }
 });
 
-
+// Create a new to-do item
 app.post('/todos', async (req, res) => {
   const { text, completed } = req.body;
 
-  // Create a new Todo document
   const newTodo = new Todo({
     text,
     completed,
   });
 
   try {
-    // Save the new todo to MongoDB
     const savedTodo = await newTodo.save();
     res.status(201).json(savedTodo);
   } catch (err) {
+    console.error('Error adding todo:', err);
     res.status(500).json({ message: 'Error adding todo', error: err });
   }
 });
 
 // Update a to-do item (toggle completion status)
-app.put('/todos/:id', (req, res) => {
-  const todoId = parseInt(req.params.id);
-  const todo = todos.find((todo) => todo.id === todoId);
-  if (!todo) return res.status(404).json({ message: 'Todo not found' });
+app.put('/todos/:id', async (req, res) => {
+  try {
+    const updatedTodo = await Todo.findByIdAndUpdate(
+      req.params.id,
+      {
+        $set: {
+          text: req.body.text,
+          completed: req.body.completed,
+        },
+      },
+      { new: true } // Return the updated document
+    );
 
-  todo.task=req.body.task;
-  todo.isComplete = !todo.isComplete;
-  res.json(todo);
+    if (!updatedTodo) {
+      return res.status(404).json({ message: 'Todo not found' });
+    }
+    
+    res.json(updatedTodo);
+  } catch (err) {
+    console.error('Error updating todo:', err);
+    res.status(500).json({ message: 'Error updating todo', error: err });
+  }
 });
 
+// Delete a to-do item
 app.delete('/todos/:id', async (req, res) => {
-  const { id } = req.params;
-
   try {
-    // Delete the todo by its ID
-    const deletedTodo = await Todo.findByIdAndDelete(id);
+    const deletedTodo = await Todo.findByIdAndDelete(req.params.id);
     if (!deletedTodo) {
       return res.status(404).json({ message: 'Todo not found' });
     }
     res.status(200).json({ message: 'Todo deleted' });
   } catch (err) {
+    console.error('Error deleting todo:', err);
     res.status(500).json({ message: 'Error deleting todo', error: err });
   }
 });
-
 
 // Start the server
 app.listen(port, () => {
