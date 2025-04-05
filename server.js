@@ -27,7 +27,7 @@ mongoose.connect(mongoURI)
 
 // Middleware
 app.use(cors({
-  origin: 'https://incredible-jelly-b0d9ae.netlify.app/',  // Replace with your frontend URL in production
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',  // Use environment variable for frontend URL in production
   methods: 'GET,POST,PUT,DELETE',
 }));
 app.use(express.json());  // To parse JSON bodies
@@ -92,14 +92,15 @@ app.post('/todos', async (req, res) => {
 // Update a to-do item (toggle completion status)
 app.put('/todos/:id', async (req, res) => {
   try {
+    const { text, completed } = req.body;
+    const updateFields = {};
+
+    if (text) updateFields.text = text;  // Only update if text is provided
+    if (typeof completed === 'boolean') updateFields.completed = completed;  // Only update if completed is provided
+
     const updatedTodo = await Todo.findByIdAndUpdate(
       req.params.id,
-      {
-        $set: {
-          text: req.body.text,
-          completed: req.body.completed,
-        },
-      },
+      { $set: updateFields },
       { new: true } // Return the updated document
     );
 
