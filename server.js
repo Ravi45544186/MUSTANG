@@ -112,6 +112,8 @@ app.put('/todos/:id', async (req, res) => {
 // Delete a to-do item
 app.delete('/todos/:id', async (req, res) => {
   const { id } = req.params;
+  console.log('DELETE request received for ID:', id);  // Log the ID being deleted
+
 
   // Validate that id is not undefined or invalid
   if (!id || !mongoose.isValidObjectId(id)) {
