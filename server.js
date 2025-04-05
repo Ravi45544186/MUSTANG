@@ -12,19 +12,18 @@ const port = process.env.PORT || 5000;  // Use environment variable for PORT
 const mongoURI = process.env.MONGODB_URI;
 
 // Check if the URI is correctly loaded
-console.log('Mongo URI:', mongoURI);  // This should log the actual MongoDB URI
-console.log('Test Variable:', process.env.TEST_VARIABLE);  // Ensure TEST_VARIABLE is set in .env for testing
-
-// Exit if Mongo URI is not found
 if (!mongoURI) {
   console.error('Mongo URI is missing in the .env file');
   process.exit(1);  // Stop the server if the URI is missing
 }
 
 // MongoDB Connection
-mongoose.connect(mongoURI)
+mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('MongoDB Connected'))
-  .catch((err) => console.error('MongoDB connection error:', err));
+  .catch((err) => {
+    console.error('MongoDB connection error:', err);
+    process.exit(1);  // Exit the server if connection fails
+  });
 
 // Middleware
 app.use(cors({
@@ -44,10 +43,10 @@ app.get('/', (req, res) => {
 app.get('/todos', async (req, res) => {
   try {
     const todos = await Todo.find();  // Fetch all todos from MongoDB
-    res.json(todos);
+    res.status(200).json(todos);
   } catch (err) {
     console.error('Error fetching todos:', err);
-    res.status(500).json({ message: 'Error fetching todos', error: err });
+    res.status(500).json({ message: 'Error fetching todos', error: err.message });
   }
 });
 
@@ -58,17 +57,23 @@ app.get('/todos/:id', async (req, res) => {
     if (!todo) {
       return res.status(404).send('Todo not found');
     }
-    res.json(todo);
+    res.status(200).json(todo);
   } catch (err) {
     console.error('Error fetching todo by ID:', err);
-    res.status(500).json({ message: 'Error fetching todo', error: err });
+    res.status(500).json({ message: 'Error fetching todo', error: err.message });
   }
 });
 
 // Create a new to-do item
 app.post('/todos', async (req, res) => {
   console.log('POST request received:', req.body);
-  const { text, completed } = req.body;
+
+  const { text, completed = false } = req.body;  // Default completed to false if not provided
+
+  // Ensure that text is provided
+  if (!text) {
+    return res.status(400).json({ message: 'Todo text is required' });
+  }
 
   const newTodo = new Todo({
     text,
@@ -80,7 +85,7 @@ app.post('/todos', async (req, res) => {
     res.status(201).json(savedTodo);
   } catch (err) {
     console.error('Error adding todo:', err);
-    res.status(500).json({ message: 'Error adding todo', error: err });
+    res.status(500).json({ message: 'Error adding todo', error: err.message });
   }
 });
 
@@ -102,10 +107,10 @@ app.put('/todos/:id', async (req, res) => {
       return res.status(404).json({ message: 'Todo not found' });
     }
 
-    res.json(updatedTodo);
+    res.status(200).json(updatedTodo);
   } catch (err) {
     console.error('Error updating todo:', err);
-    res.status(500).json({ message: 'Error updating todo', error: err });
+    res.status(500).json({ message: 'Error updating todo', error: err.message });
   }
 });
 
@@ -113,7 +118,6 @@ app.put('/todos/:id', async (req, res) => {
 app.delete('/todos/:id', async (req, res) => {
   const { id } = req.params;
   console.log('DELETE request received for ID:', id);  // Log the ID being deleted
-
 
   // Validate that id is not undefined or invalid
   if (!id || !mongoose.isValidObjectId(id)) {
@@ -128,7 +132,7 @@ app.delete('/todos/:id', async (req, res) => {
     res.status(200).json({ message: 'Todo deleted' });
   } catch (err) {
     console.error('Error deleting todo:', err);
-    res.status(500).json({ message: 'Error deleting todo', error: err });
+    res.status(500).json({ message: 'Error deleting todo', error: err.message });
   }
 });
 
