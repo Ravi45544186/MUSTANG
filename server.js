@@ -27,7 +27,7 @@ mongoose.connect(mongoURI)
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',  // Use environment variable for frontend URL in production
+  origin: 'https://ferrari-8i52.onrender.com',  // Use environment variable for frontend URL in production
   methods: 'GET,POST,PUT,DELETE',
 }));
 app.use(express.json());  // To parse JSON bodies
