@@ -27,7 +27,10 @@ mongoose.connect(mongoURI)
   .catch((err) => console.error('MongoDB connection error:', err));
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: 'https://incredible-jelly-b0d9ae.netlify.app/',  // Replace with your frontend URL in production
+  methods: 'GET,POST,PUT,DELETE',
+}));
 app.use(express.json());  // To parse JSON bodies
 
 // Routes
