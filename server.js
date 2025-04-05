@@ -67,6 +67,7 @@ app.get('/todos/:id', async (req, res) => {
 
 // Create a new to-do item
 app.post('/todos', async (req, res) => {
+  console.log('POST request received:', req.body);
   const { text, completed } = req.body;
 
   const newTodo = new Todo({
